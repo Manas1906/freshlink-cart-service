@@ -4,6 +4,7 @@ import com.freshlink.cart.dto.AddToCartRequest;
 import com.freshlink.cart.model.*;
 import com.freshlink.cart.repository.CartRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CartService {
@@ -14,6 +15,7 @@ public class CartService {
         this.repo = repo;
     }
 
+    @Transactional
     public Cart addToCart(String email, AddToCartRequest req) {
 
         Cart cart = repo.findByCustomerEmail(email)
@@ -23,30 +25,27 @@ public class CartService {
                     return c;
                 });
 
-        boolean found = false;
-
-        for (CartItem item : cart.getItems()) {
-            if (item.getProductId().longValue() == req.productId.longValue()) {
-                // merge logic
-                item.setQuantity(item.getQuantity() + req.quantity);
-                item.setPrice(req.price); // latest price
-                found = true;
-                break;
-            }
-        }
-
-        if (!found) {
-            CartItem newItem = new CartItem();
-            newItem.setProductId(req.productId);
-            newItem.setProductName(req.productName);
-            newItem.setPrice(req.price);
-            newItem.setQuantity(req.quantity);
-            newItem.setCart(cart);
-            cart.getItems().add(newItem);
-        }
+        cart.getItems().stream()
+                .filter(i -> i.getProductId().equals(req.productId))
+                .findFirst()
+                .ifPresentOrElse(item -> {
+                    item.setQuantity(item.getQuantity() + req.quantity);
+                    item.setPrice(req.price);
+                }, () -> {
+                    CartItem i = new CartItem();
+                    i.setProductId(req.productId);
+                    i.setProductName(req.productName);
+                    i.setPrice(req.price);
+                    i.setQuantity(req.quantity);
+                    i.setCart(cart);
+                    cart.getItems().add(i);
+                });
 
         return repo.save(cart);
     }
+
+
+        boolean found = false;
 
 
     public Cart myCart(String email) {
