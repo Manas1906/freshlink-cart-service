@@ -44,10 +44,6 @@ public class CartService {
         return repo.save(cart);
     }
 
-
-        boolean found = false;
-
-
     public Cart myCart(String email) {
         return repo.findByCustomerEmail(email).orElseThrow();
     }
